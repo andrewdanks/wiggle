@@ -1,0 +1,5 @@
+venv/*
+.DS_Store
+static/street_images/*.jpg
+static/street_images/*
+*.pyc
