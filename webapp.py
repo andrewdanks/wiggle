@@ -34,6 +34,20 @@ def new_bike_route(start, end):
 def determine_image_labels(bike_route, street_images):
 
     num_images = len(street_images)
+
+    def set_next_street(street, current_img_idx):
+        current_step = street_images[current_img_idx].step
+        for street_image in street_images[current_img_idx:]:
+            if street_image.step != current_step:
+                street_image.step.street = street
+    def get_next_street(current_img_idx):
+        current_step = street_images[current_img_idx].step
+        if current_img_idx + 1 < num_images:
+            for street_image in street_images[current_img_idx:]:
+                if street_image.step != current_step:
+                    return street_image.step.street
+        return None
+
     upcoming_turn = None
     for i, street_image in enumerate(street_images):
         if not street_image.label:
@@ -45,12 +59,12 @@ def determine_image_labels(bike_route, street_images):
 
             if i + 1 < num_images:
                 if parsed_instructions.toward_street:
-                    street_images[i+1].step.street = parsed_instructions.toward_street
+                    set_next_street(parsed_instructions.toward_street, i)
                 elif parsed_instructions.turn_street:
-                    street_images[i+1].step.street = parsed_instructions.turn_street
+                    set_next_street(parsed_instructions.toward_street, i)
 
             current_street = street_image.step.street
-            next_street = street_images[i+1].step.street if i + 1 < num_images else None
+            next_street = get_next_street(i)
 
             if street_image.is_final_destination:
                 label = 'Here is your destination!'
