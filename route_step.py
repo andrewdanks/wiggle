@@ -26,3 +26,6 @@ class RouteStep(object):
         self.segments = segments
         self.destination_direction = destination_direction
         self.bearing = geo_util.get_initial_bearing(start_location, end_location)
+        self.street = None
+        self.init_image = None
+        self.final_image = None

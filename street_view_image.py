@@ -16,11 +16,9 @@ class StreetViewImage(object):
         self.image_file_name = self._get_image_file_name()
         self.image_path = os.path.join(config.STREET_IMAGES_PATH, self.image_file_name)
 
-        self.step = None
-        self.segment = None
-        self.street = None
         self.is_turn = False
         self.is_final_destination = False
+
         self.label = None
 
         self.download_and_save()

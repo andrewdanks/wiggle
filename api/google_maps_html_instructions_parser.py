@@ -10,8 +10,10 @@ class HtmlInstructionsParser(object):
     ON = 'ON'
     HEAD = 'HEAD'
     DESTINATION = 'DESTINATION'
+    LEFT = 'LEFT'
+    RIGHT = 'RIGHT'
 
-    KEYWORDS = [TOWARD, TURN, ONTO, ON, HEAD]
+    KEYWORDS = set([TOWARD, TURN, ONTO, ON, HEAD, LEFT, RIGHT])
 
     def __init__(self, html_instructions):
         self.html_instructions = html_instructions
@@ -36,16 +38,13 @@ class HtmlInstructionsParser(object):
                 ignore = True
             elif s == '>':
                 turn_off_ignore = True
-                if not tag_open:
-                    tag_open = True
-                else:
-                    tag_open = False
-            if not ignore:
-                if s == ' ' and tokens_chars and not tag_open:
-                    tokens.append(''.join(tokens_chars))
-                    tokens_chars = []
-                else:
-                    tokens_chars.append(s)
+                tag_open = not tag_open
+            #if not ignore:
+            if s == ' ' and tokens_chars and not tag_open:
+                tokens.append(''.join(tokens_chars))
+                tokens_chars = []
+            elif not ignore:
+                tokens_chars.append(s)
             if turn_off_ignore:
                 ignore = False
                 turn_off_ignore = False
@@ -63,6 +62,7 @@ class HtmlInstructionsParser(object):
             if not added:
                 processed_tokens.append(token)
 
+        print processed_tokens
         return processed_tokens
 
     def get_toward_street(self):
@@ -72,10 +72,19 @@ class HtmlInstructionsParser(object):
         return self._get_token_after_word(self.ON) or self._get_token_after_word(self.ONTO)
 
     def get_destination_direction(self):
-        return self._get_token_after_word(self.DESTINATION, 5)
+        # HACK
+        last_token = self.tokens[-1]
+        last_tokens = last_token.split()
+        if last_tokens[0].upper() == self.DESTINATION:
+            if last_tokens[-1].upper() in [self.LEFT, self.RIGHT]:
+                return last_tokens[-1].upper()
+        return None
 
     def get_turn_direction(self):
-        return self._get_token_after_word(self.TURN)
+        keyword = self._get_keyword_after_word(self.TURN)
+        if keyword in [self.LEFT, self.RIGHT]:
+            return keyword
+        return None
 
     def get_turn_street(self):
         return self._get_token_after_word(self.TURN, 3)
@@ -86,4 +95,15 @@ class HtmlInstructionsParser(object):
             return self.tokens[word_idx + places]
         except:
             print 'FAIL:', word, places
-            return None
+            pass
+        return None
+
+    def _get_keyword_after_word(self, word):
+        try:
+            word_idx = self.tokens.index(word)
+            for token in self.tokens[word_idx+1:]:
+                if token in self.KEYWORDS:
+                    return token
+        except:
+            pass
+        return None

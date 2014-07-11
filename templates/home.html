@@ -49,7 +49,7 @@
 
         <div class="street_image">
             <div style="background-image:url('{{ image.image_path }}');width:400px;height:400px">&nbsp;</div>
-            <b>{{ image.label }}</b> <small>({{ image.time_left_for_step }} / {{ image.distance_remaining_for_step }})</small><br>
+            {{ image.label|safe }} <small>({{ image.time_left_for_step }} / {{ image.distance_remaining_for_step }})</small><br>
         </div>
 
       {% endfor %}
@@ -73,7 +73,7 @@ $(document).ready(function(){
       //slidesToShow: 1,
       // arrows: true,
       // dots: false,
-       infinite: false,
+       infinite: true,
        //draggable: false,
 
     });

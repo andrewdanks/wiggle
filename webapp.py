@@ -5,7 +5,7 @@ from flask import abort
 
 from api.google_maps import get_bike_route
 
-from street_view import get_images_for_bike_route
+from street_view import set_images_for_bike_route
 from location import Location
 from presenters.street_view_image_presenter import StreetViewImagePresenter
 from api.google_maps_html_instructions_parser import HtmlInstructionsParser
@@ -25,71 +25,64 @@ def new_bike_route(start, end):
     end_location = Location(address=end)
 
     bike_route = get_bike_route(start_location, end_location)
-    street_images = get_images_for_bike_route(bike_route)
+    set_images_for_bike_route(bike_route)
 
-    determine_image_labels(bike_route, street_images)
+    set_image_labels(bike_route)
 
-    return bike_route, street_images
+    return bike_route
 
-def determine_image_labels(bike_route, street_images):
+def set_image_labels(bike_route):
 
-    num_images = len(street_images)
+    num_steps = len(bike_route.steps)
 
-    def set_next_street(street, current_img_idx):
-        current_step = street_images[current_img_idx].step
-        for street_image in street_images[current_img_idx:]:
-            if street_image.step != current_step:
-                street_image.step.street = street
-    def get_next_street(current_img_idx):
-        current_step = street_images[current_img_idx].step
-        if current_img_idx + 1 < num_images:
-            for street_image in street_images[current_img_idx:]:
-                if street_image.step != current_step:
-                    return street_image.step.street
-        return None
+    is_first_step = lambda idx: idx == 0
+    is_last_step = lambda idx: idx + 1 == num_steps
+    has_next_step = lambda idx: idx + 1 < num_steps
+    next_step = lambda idx: bike_route.steps[idx + 1]
 
-    upcoming_turn = None
-    for i, street_image in enumerate(street_images):
-        if not street_image.label:
+    for i, step in enumerate(bike_route.steps):
 
-            parsed_instructions = HtmlInstructionsParser(street_image.step.html_instructions)
-
-            if i == 0:
-                street_image.step.street = parsed_instructions.on_street
-
-            if i + 1 < num_images:
-                if parsed_instructions.toward_street:
-                    set_next_street(parsed_instructions.toward_street, i)
-                elif parsed_instructions.turn_street:
-                    set_next_street(parsed_instructions.toward_street, i)
-
-            current_street = street_image.step.street
-            next_street = get_next_street(i)
-
-            if street_image.is_final_destination:
-                label = 'Here is your destination!'
-            elif parsed_instructions.destination_direction:
-                label = 'Your destination will be on the %s' % parsed_instructions.destination_direction
-            elif street_image.is_turn:
-                    if parsed_instructions.turn_direction:
-                        label = 'Turn %s' % parsed_instructions.turn_direction
-                        if next_street:
-                            label += ' onto %s' % next_street
-                        label += '!'
-                    else:
-                        label = 'Turn here!'
-            elif current_street:
-                label = 'Continue on %s' % current_street
-                if street_images[i+1].street:
-                    label += ' toward %s' % next_street
-            elif not current_street:
-                label = 'Continue this way'
-            else:
-                label = '?'
+        parsed_instr = step.parsed_instructions
 
 
-            street_image.label = label
+        curr_street = step.street
 
+        next_street = None
+        if has_next_step(i) and next_step(i).street:
+            next_street = next_step(i).street
+        next_parsed_instr = None
+        if has_next_step(i):
+            next_parsed_instr = next_step(i).parsed_instructions
+
+        if step.final_image:
+            if step.final_image.is_final_destination:
+                label = '<b>Here is your destination!</b>'
+            elif step.final_image.is_turn:
+                if next_parsed_instr and next_parsed_instr.turn_direction:
+                    label = 'Turn <b>%s</b>' % next_parsed_instr.turn_direction
+                    if next_street:
+                        label += ' onto <b>%s</b>' % next_street
+                    label += '!'
+                else:
+                    label = '<b>Turn here!</b>'
+            step.final_image.label = label
+        
+        if parsed_instr.destination_direction:
+            label = 'Your destination will be on the <b>%s</b>' % parsed_instr.destination_direction.lower()
+            for segment in step.segments:
+                segment.image.label = label
+        elif curr_street:
+            label = 'Continue on <b>%s</b>' % curr_street
+            if next_street:
+                label += ' toward <b>%s</b>' % next_street
+            for segment in step.segments:
+                segment.image.label = label
+            if step.init_image:
+                step.init_image.label = label
+        else:
+            label = 'Continue this way'
+            for segment in step.segments:
+                segment.image.label = label
 
 @app.route('/map', methods=['GET'])
 def map():
@@ -97,9 +90,16 @@ def map():
     end = request.args.get('end', None)
 
     if start and end:
-        bike_route, street_images = new_bike_route(start, end)
+        bike_route = new_bike_route(start, end)
 
-        street_image_presenters = [StreetViewImagePresenter(bike_route, street_image) for street_image in street_images]
+        street_image_presenters = []
+        for step in bike_route.steps:
+            if step.init_image:
+                street_image_presenters.append(StreetViewImagePresenter(step.init_image, step.distance, step.duration))
+            for segment in step.segments:
+                street_image_presenters.append(StreetViewImagePresenter(segment.image, segment.distance_remaining_in_step, segment.duration_remaining_in_step))
+            if step.final_image:
+                street_image_presenters.append(StreetViewImagePresenter(step.final_image, 0.0, 0.0))
 
         return render_template('home.html', street_images=street_image_presenters)
 

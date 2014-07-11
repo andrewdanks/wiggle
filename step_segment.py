@@ -8,4 +8,5 @@ class StepSegment(object):
         self.bearing = geo_util.get_initial_bearing(start_location, end_location)
         self.distance_remaining_in_step = None
         self.duration_remaining_in_step = None
+        self.image = None
         

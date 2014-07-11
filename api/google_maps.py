@@ -64,6 +64,21 @@ def download_street_view_image(location_str, bearing_str, size_str):
 def get_location_from_gmaps_location(location_dict):
     return Location(lat=location_dict[GMAPS_KEY_LATITUDE], lng=location_dict[GMAPS_KEY_LONGITUDE])
 
+def set_street_names_for_steps(steps):
+
+    num_steps = len(steps)
+    for i, step in enumerate(steps):
+
+        if i == 0:
+            step.street = step.parsed_instructions.on_street
+
+        if i + 1 < num_steps:
+            if steps[i+1].parsed_instructions.turn_street:
+                steps[i+1].street = steps[i+1].parsed_instructions.turn_street
+            elif step.parsed_instructions.toward_street:
+                steps[i+1].street = step.parsed_instructions.toward_street
+
+
 def get_bike_route(start_location, end_location):
 
     params = {
@@ -125,6 +140,9 @@ def get_bike_route(start_location, end_location):
 
         duration_elapsed += duration
         distance_elapsed += distance
+
+
+    set_street_names_for_steps(steps)
 
     return BikeRoute(
         get_location_from_gmaps_location(route_data[GMAPS_KEY_START_LOCATION]),
