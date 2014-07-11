@@ -4,22 +4,32 @@
 <title>wiggle</title>
 
 <meta name="viewport" content="width=device-width, initial-scale=1">
+
 <link href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
-<script src="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+<link rel="stylesheet" type="text/css" href="//cdn.jsdelivr.net/jquery.slick/1.3.6/slick.css"/>
+
+<style>
+.slick-prev::before, .slick-next::before {
+    color: #428bca;
+}
+.street_image {
+    width: 420px;
+    margin: 0 auto;
+}
+</style>
+
 </head>
 
 <body>
 
 <div class="container">
 
-<h1>wiggle <small>alpha</small></h1>
-
-<br>
-
 <div class="row">
   <div class="col-md-3">
 
-    <form role="form" method="POST" action="/">
+    <h1>wiggle <small>&alpha;lph&alpha;</small></h1>
+    <br>
+    <form role="form" method="GET" action="/map">
       <div class="form-group">
         <label for="start">Origin</label>
         <input type="text" class="form-control" id="start" name="start" placeholder="1699 7th Ave., San Francisco, CA" value="1253 Waller St., San Francisco">
@@ -33,15 +43,43 @@
 
   </div>
   <div class="col-md-9">
+    <div style="margin-top:20px">
+      <div class="street_images" style="width:400px;margin:0 auto;">
       {% for image in street_images %}
 
-        <p><img src="/static/street_images/{{ route_id }}/{{ image.name }}"></p>
+        <div class="street_image">
+            <div style="background-image:url('{{ image.image_path }}');width:400px;height:400px">&nbsp;</div>
+            <b>{{ image.label }}</b> <small>({{ image.time_left_for_step }} / {{ image.distance_remaining_for_step }})</small><br>
+        </div>
 
       {% endfor %}
+      </div>
+    </div>
   </div>
 </div>
 
 </div>
+
+
+<script src="//code.jquery.com/jquery-1.11.0.min.js"></script>
+<script src="//code.jquery.com/jquery-migrate-1.2.1.min.js"></script>
+<script src="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+<script src="//cdn.jsdelivr.net/jquery.slick/1.3.6/slick.min.js"></script>
+
+<script type="text/javascript">
+    
+$(document).ready(function(){
+    $('.street_images').slick({
+      //slidesToShow: 1,
+      // arrows: true,
+      // dots: false,
+       infinite: false,
+       //draggable: false,
+
+    });
+});
+    
+</script>
 
 </body>
 </html>

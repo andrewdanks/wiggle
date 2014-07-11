@@ -18,11 +18,6 @@ def strip_html(html):
 def is_power2(num):
     return num != 0 and ((num & (num - 1)) == 0)
 
-def save_image(binary_image, write_location):
-    f = open(write_location, 'wb')
-    f.write(binary_image)
-    f.close()
-
 def mkdir(path_to_dir):
     try:
         os.makedirs(path_to_dir)

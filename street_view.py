@@ -1,7 +1,7 @@
 import re
 import util
 import geo_util
-import maps_api
+from api import google_maps as maps_api
 from street_view_image import StreetViewImage
 from step_segment import StepSegment
 from constants import *
@@ -14,31 +14,37 @@ def get_turn_image(next_step, last_location, last_bearing):
         elif next_step.maneuver == GMAPS_TURN_RIGHT_MANEUVER:
             next_bearing = (last_bearing + 60) % 360 
         if next_bearing:
-            next_image = maps_api.get_street_view_image(last_location, next_bearing)
+            next_image = StreetViewImage(last_location, next_bearing)
             return next_image
+    return None
+
+def get_final_destination_image(step, last_segment):
+    bearing = None
+    if step.destination_direction == FINAL_DESTINATION_RIGHT:
+        bearing = (last_segment.bearing + 90) % 360
+    elif step.destination_direction == FINAL_DESTINATION_LEFT:
+        bearing = (last_segment.bearing - 90) % 360
+    if bearing:
+        return StreetViewImage(last_segment.end_location, bearing)
     return None
 
 def get_images_for_bike_route(bike_route):
 
     images = []
 
-    first_image = maps_api.get_street_view_image(bike_route.steps[0].segments[0].start_location, bike_route.steps[0].segments[0].bearing)
-    images.append(StreetViewImage(
-        first_image,
-        bike_route.steps[0],
-        bike_route.steps[0].segments[0]
-    ))
+    first_image = StreetViewImage(bike_route.steps[0].segments[0].start_location, bike_route.steps[0].segments[0].bearing)
+    first_image.step = bike_route.steps[0]
+    first_image.segment = bike_route.steps[0].segments[0]
+    images.append(first_image)
 
     num_steps = len(bike_route.steps)
 
     for i, step in enumerate(bike_route.steps):
         for j, segment in enumerate(step.segments):
-            end_image = maps_api.get_street_view_image(segment.end_location, segment.bearing)
-            images.append(StreetViewImage(
-                end_image,
-                step,
-                segment
-            ))
+            image = StreetViewImage(segment.end_location, segment.bearing)
+            image.step = step
+            image.segment = segment
+            images.append(image)
 
             last_segment = segment
             last_location = segment.end_location
@@ -51,17 +57,18 @@ def get_images_for_bike_route(bike_route):
         # Get an image of the turn
         turn_image = get_turn_image(next_step, last_location, last_bearing)
         if turn_image:
-            images.append(StreetViewImage(
-                turn_image,
-                step,
-                last_segment,
-                is_turn=True
-            ))
+            turn_image.step = step
+            turn_image.segment = last_segment
+            turn_image.is_turn = True
+            images.append(turn_image)
+
+    if bike_route.steps[-1].destination_direction:
+        final_destination_image = get_final_destination_image(bike_route.steps[-1], last_segment)
+        if final_destination_image:
+            final_destination_image.step = bike_route.steps[-1]
+            final_destination_image.segment = last_segment
+            final_destination_image.is_final_destination = True
+            images.append(final_destination_image)
 
     return images
 
-# if __name__ == '__main__':
-#     start_location = Location(address='1253+Waller+St,+San+Francisco,+CA+94117')
-#     end_location = Location(address='140+New+Montgomery+St,+San+Francisco,+CA+94105,+USA')
-#     bike_route = maps_api.get_bike_route(start_location, end_location)
-#     get_images_for_bike_route(bike_route)

@@ -2,13 +2,10 @@ import requests
 import geo_util
 import util
 import config
-import re
-import os
 from location import Location
 from bike_route import BikeRoute
 from route_step import RouteStep
 from step_segment import StepSegment
-from street_view_image import StreetViewImage
 from constants import *
 
 def split_location_segment(start_location, end_location):
